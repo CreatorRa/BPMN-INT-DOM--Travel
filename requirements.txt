@@ -1,1 +1,5 @@
-
+pm4py
+pandas
+matplotlib
+graphviz
+openpyxl
