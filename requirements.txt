@@ -3,3 +3,4 @@ pandas
 matplotlib
 graphviz
 openpyxl
+numpy
