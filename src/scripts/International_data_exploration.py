@@ -384,6 +384,114 @@ print(rejection_summary)
 rejection_summary_df = pd.DataFrame([rejection_summary])
 
 
+# ============================================================
+# 15. UNEXPECTED BEHAVIOR / MISSING PERMIT CHECK
+# ============================================================
+
+activity_col = "concept:name"
+case_col = "case:concept:name"
+time_col = "time:timestamp"
+
+# Sort data by case and timestamp
+df_sorted = df.sort_values([case_col, time_col]).copy()
+
+# Create case-level activity sets
+case_activities = (
+    df_sorted.groupby(case_col)[activity_col]
+    .apply(lambda x: set(x))
+)
+
+def has_activity(activity_set, text):
+    return any(text.lower() in act.lower() for act in activity_set)
+
+total_cases = df_sorted[case_col].nunique()
+
+# 1. Declaration submitted but no permit submitted
+declaration_without_permit = case_activities[
+    case_activities.apply(lambda acts:
+        has_activity(acts, "Declaration SUBMITTED by EMPLOYEE")
+        and not has_activity(acts, "Permit SUBMITTED by EMPLOYEE")
+    )
+]
+
+# 2. Payment handled but no permit submitted
+payment_without_permit = case_activities[
+    case_activities.apply(lambda acts:
+        has_activity(acts, "Payment Handled")
+        and not has_activity(acts, "Permit SUBMITTED by EMPLOYEE")
+    )
+]
+
+# 3. Payment handled but no permit final approval
+payment_without_final_permit = case_activities[
+    case_activities.apply(lambda acts:
+        has_activity(acts, "Payment Handled")
+        and not has_activity(acts, "Permit FINAL_APPROVED")
+    )
+]
+
+# 4. Payment handled but no declaration final approval
+payment_without_final_declaration = case_activities[
+    case_activities.apply(lambda acts:
+        has_activity(acts, "Payment Handled")
+        and not has_activity(acts, "Declaration FINAL_APPROVED")
+    )
+]
+
+# Helper function for sequence/order checks
+def first_time(case_df, activity_text):
+    rows = case_df[case_df[activity_col].str.contains(activity_text, case=False, na=False)]
+    if rows.empty:
+        return None
+    return rows[time_col].min()
+
+# Sequence checks
+payment_before_end_trip = 0
+start_trip_after_payment = 0
+start_trip_before_permit_final_approval = 0
+declaration_before_end_trip = 0
+payment_before_request_payment = 0
+
+for case_id, case_df in df_sorted.groupby(case_col):
+    start_trip_time = first_time(case_df, "Start trip")
+    end_trip_time = first_time(case_df, "End trip")
+    payment_time = first_time(case_df, "Payment Handled")
+    request_payment_time = first_time(case_df, "Request Payment")
+    permit_final_time = first_time(case_df, "Permit FINAL_APPROVED")
+    declaration_submit_time = first_time(case_df, "Declaration SUBMITTED by EMPLOYEE")
+
+    if payment_time is not None and end_trip_time is not None and payment_time < end_trip_time:
+        payment_before_end_trip += 1
+
+    if start_trip_time is not None and payment_time is not None and start_trip_time > payment_time:
+        start_trip_after_payment += 1
+
+    if start_trip_time is not None and permit_final_time is not None and start_trip_time < permit_final_time:
+        start_trip_before_permit_final_approval += 1
+
+    if declaration_submit_time is not None and end_trip_time is not None and declaration_submit_time < end_trip_time:
+        declaration_before_end_trip += 1
+
+    if payment_time is not None and request_payment_time is not None and payment_time < request_payment_time:
+        payment_before_request_payment += 1
+
+print("\n================ UNEXPECTED BEHAVIOR CHECK ================")
+print(f"Total cases: {total_cases}")
+
+print("\nMissing permit / approval checks:")
+print(f"Cases with declaration submitted but no permit submitted: {len(declaration_without_permit)}")
+print(f"Cases with payment handled but no permit submitted: {len(payment_without_permit)}")
+print(f"Cases with payment handled but no permit final approval: {len(payment_without_final_permit)}")
+print(f"Cases with payment handled but no declaration final approval: {len(payment_without_final_declaration)}")
+
+print("\nSequence/order checks:")
+print(f"Cases with Payment Handled before End trip: {payment_before_end_trip}")
+print(f"Cases with Start trip after Payment Handled: {start_trip_after_payment}")
+print(f"Cases with Start trip before Permit Final Approval: {start_trip_before_permit_final_approval}")
+print(f"Cases with Declaration Submitted before End trip: {declaration_before_end_trip}")
+print(f"Cases with Payment Handled before Request Payment: {payment_before_request_payment}")
+
+
 # ------------------------------------------------------------
 # 14. Save all outputs into ONE Excel workbook
 # ------------------------------------------------------------
