@@ -321,10 +321,15 @@ if possible_rejection_activities:
     for activity in possible_rejection_activities:
         print("-", activity)
 
-    rejected_cases = df[
+    # Keep only events where the activity name contains rejection-related wording
+    rejection_events = df[
         df["concept:name"].isin(possible_rejection_activities)
-    ]["case:concept:name"].nunique()
+    ].copy()
 
+    # Total number of unique cases that contain at least one rejection activity
+    rejected_cases = rejection_events["case:concept:name"].nunique()
+
+    # Rejection rate based on cases, not events
     rejection_rate = round((rejected_cases / total_cases) * 100, 2)
 
     rejection_summary = {
@@ -332,6 +337,29 @@ if possible_rejection_activities:
         "Total Cases": total_cases,
         "Rejection Rate (%)": rejection_rate
     }
+
+    print("\nRejection summary:")
+    print(rejection_summary)
+
+    print("\nRejection activities by event count:")
+    rejection_activity_event_count = (
+        rejection_events["concept:name"]
+        .value_counts()
+        .reset_index()
+    )
+    rejection_activity_event_count.columns = ["Rejection Activity", "Event Count"]
+    print(rejection_activity_event_count)
+
+    print("\nRejection activities by case count:")
+    rejection_activity_case_count = (
+        rejection_events
+        .groupby("concept:name")["case:concept:name"]
+        .nunique()
+        .sort_values(ascending=False)
+        .reset_index()
+    )
+    rejection_activity_case_count.columns = ["Rejection Activity", "Case Count"]
+    print(rejection_activity_case_count)
 
 else:
     print("No activity containing the word 'reject' was found.")
@@ -342,7 +370,15 @@ else:
         "Rejection Rate (%)": 0
     }
 
-print("\nRejection summary:")
+    rejection_activity_event_count = pd.DataFrame(
+        columns=["Rejection Activity", "Event Count"]
+    )
+
+    rejection_activity_case_count = pd.DataFrame(
+        columns=["Rejection Activity", "Case Count"]
+    )
+
+print("\nFinal rejection summary:")
 print(rejection_summary)
 
 rejection_summary_df = pd.DataFrame([rejection_summary])
@@ -371,6 +407,8 @@ with pd.ExcelWriter(EXCEL_OUTPUT_PATH, engine="openpyxl") as writer:
     start_activity_frequency.to_excel(writer, sheet_name="Start Activities", index=False)
     end_activity_frequency.to_excel(writer, sheet_name="End Activities", index=False)
     rejection_summary_df.to_excel(writer, sheet_name="Rejection Summary", index=False)
+    rejection_activity_event_count.to_excel(writer, sheet_name="Rejection Event Count", index=False)
+    rejection_activity_case_count.to_excel(writer, sheet_name="Reject Case Count", index=False)
 
 
 # ------------------------------------------------------------
