@@ -15,17 +15,15 @@ def discover_domestic_petri_net(file_path):
     print("Loading event log...")
     log = pm4py.read_xes(file_path)
     
-    print("\n--- Step 1: Strict Noise Filtering ---")
-    print("Applying strict threshold (retaining only the top 25% of standard behavior)...")
-    # Severely restrict the log to find the readable 'Happy Path'
-    filtered_log = pm4py.filter_variants_by_coverage_percentage(log, 0.25)
-    
+    print("\n--- Step 1: Strict Noise Filtering (Inductive Miner) ---")
+    print("Using the Inductive Miner's noise_threshold to isolate the 'Happy Path'...")
+    # The Inductive Miner filters infrequent behaviour internally via noise_threshold. 
+    # This is robust even on logs with no single dominant variant (a variant-coverage filter would empty such logs entirely).
     print(f"Original Log Size: {len(log)} cases")
-    print(f"Filtered Log Size: {len(filtered_log)} cases")
 
     print("\n--- Step 2: Process Discovery ---")
-    print("Discovering Petri Net using the Inductive Miner...")
-    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(filtered_log)
+    print("Discovering Petri Net using the Inductive Miner (noise_threshold=0.2)...")
+    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(log, noise_threshold=0.2)
     
     print("\n--- Step 3: Visualization ---")
     os.makedirs('output', exist_ok=True)
@@ -36,7 +34,8 @@ def discover_domestic_petri_net(file_path):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)
+    # script now lives in src/Domestic_Analysis/, so go up two levels to the project root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
     file_path = os.path.join(project_root, 'Data', 'raw', 'DomesticDeclarations.xes')
     
     discover_domestic_petri_net(file_path)
