@@ -17,7 +17,11 @@ import pm4py
 def load_log():
     """Load the International Declarations XES log as a DataFrame."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    xes_path = os.path.join(script_dir, '..', 'Data', 'raw', 'InternationalDeclarations.xes')
+    
+    # Go up TWO levels: from International_Analysis -> src -> Root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    
+    xes_path = os.path.join(project_root, 'Data', 'raw', 'InternationalDeclarations.xes')
 
     print("Loading International Declarations log...")
     log = pm4py.read_xes(xes_path)

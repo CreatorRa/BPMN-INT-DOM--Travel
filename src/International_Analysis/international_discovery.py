@@ -24,7 +24,11 @@ NOISE_THRESHOLD = 0.2
 def load_log():
     """Load the International Declarations XES log as a DataFrame."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    xes_path = os.path.join(script_dir, '..', 'Data', 'raw', 'InternationalDeclarations.xes')
+    
+    # Go up TWO levels: from International_Analysis -> src -> Root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    
+    xes_path = os.path.join(project_root, 'Data', 'raw', 'InternationalDeclarations.xes')
 
     print("Loading International Declarations log...")
     log = pm4py.read_xes(xes_path)
@@ -53,7 +57,8 @@ def main():
     # ----------------------------------------------------------
     # Save the visual representation
     # ----------------------------------------------------------
-    pm4py.save_vis_petri_net(net, im, fm, 'output/international_petri_net_strict.png')
+    os.makedirs('output/International', exist_ok=True)
+    pm4py.save_vis_petri_net(net, im, fm, 'output/International/international_petri_net_strict.png')
     print(f"Saved strict Petri net visualization (noise_threshold={NOISE_THRESHOLD})")
 
     print("\nDiscovery complete.")

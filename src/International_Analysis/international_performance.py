@@ -7,7 +7,7 @@ Declarations event log:
   * Rejection / rework summary
 
 Outputs CSV summaries and a duration histogram to the shared
-``output/`` directory so the results can be compared side-by-side
+``output/International`` directory so the results can be compared side-by-side
 with the Domestic Declarations analysis.
 """
 
@@ -21,7 +21,11 @@ import pm4py
 def load_log():
     """Load the International Declarations XES log as a DataFrame."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    xes_path = os.path.join(script_dir, '..', 'Data', 'raw', 'InternationalDeclarations.xes')
+    
+    # Go up TWO levels: from International_Analysis -> src -> Root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    
+    xes_path = os.path.join(project_root, 'Data', 'raw', 'InternationalDeclarations.xes')
 
     print("Loading International Declarations log...")
     log = pm4py.read_xes(xes_path)
@@ -38,7 +42,7 @@ def main():
     """Run the full performance analysis pipeline."""
     df = load_log()
 
-    os.makedirs('output', exist_ok=True)
+    os.makedirs('output/International', exist_ok=True)
 
     # ----------------------------------------------------------
     # Basic statistics
@@ -54,7 +58,7 @@ def main():
         'activity': activities
     })
     activity_df.index.name = 'index'
-    activity_df.to_csv('output/international_activity_list.csv')
+    activity_df.to_csv('output/International/international_activity_list.csv')
     print(f"Saved activity list ({len(activities)} activities)")
 
     # ----------------------------------------------------------
@@ -76,7 +80,7 @@ def main():
             'Percentage': round(pct, 2),
             'Activity Sequence': sequence
         })
-    pd.DataFrame(top_variants).to_csv('output/international_top_variants.csv', index=False)
+    pd.DataFrame(top_variants).to_csv('output/International/international_top_variants.csv', index=False)
     print("Saved top 5 variants")
 
     # ----------------------------------------------------------
@@ -92,7 +96,7 @@ def main():
     transitions = df_sorted.dropna(subset=['next_activity'])
     grouped = transitions.groupby(['concept:name', 'next_activity'])['transition_days'].agg(['mean', 'max', 'count'])
     grouped = grouped.sort_values('mean', ascending=False)
-    grouped.head(5).to_csv('output/international_bottlenecks.csv')
+    grouped.head(5).to_csv('output/International/international_bottlenecks.csv', index=False)
     print("Saved top 5 bottlenecks")
 
     # ----------------------------------------------------------
@@ -120,7 +124,7 @@ def main():
     plt.ylabel('Number of Cases')
     plt.title('International Declarations - Case Duration Distribution')
     plt.tight_layout()
-    plt.savefig('output/international_duration_histogram.png', dpi=150)
+    plt.savefig('output/International/international_duration_histogram.png', dpi=150)
     plt.close()
     print("Saved duration histogram")
 
@@ -137,6 +141,20 @@ def main():
         print("Activities immediately preceding a rejection:")
         for act, cnt in preceding.items():
             print(f"  {act}: {cnt}")
+            
+        # Go up two levels to reach the root, then to Output/International
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(script_dir))
+        out_dir = os.path.join(project_root, 'Output', 'International')
+        os.makedirs(out_dir, exist_ok=True)
+        
+        csv_path = os.path.join(out_dir, 'international_rejection_predecessors.csv')
+        
+        # Convert the pandas Series to a DataFrame and save
+        preceding_df = preceding.reset_index()
+        preceding_df.columns = ['Preceding Activity', 'Rejection Count']
+        preceding_df.to_csv(csv_path, index=False)
+        print(f"\n-> Saved rejection predecessors to: {csv_path}")
 
     print("\nPerformance analysis complete.")
 
