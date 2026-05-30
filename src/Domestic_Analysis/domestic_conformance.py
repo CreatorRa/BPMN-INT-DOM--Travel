@@ -1,8 +1,9 @@
 """
 This script quantitatively verifies the quality of our discovered Petri Net. 
-It re-generates the "Happy Path" model using the strict 25% filter, and then 
-plays the ENTIRE unfiltered log (all 56,437 cases) through that simplified model 
-using Token Replay to calculate the overall Fitness and Precision scores
+It re-generates the "Happy Path" model using the Inductive Miner's built-in
+noise_threshold (0.2), and then plays the ENTIRE unfiltered log through that
+simplified model using Token Replay to calculate the overall Fitness and
+Precision scores.
 """
 
 import pm4py
@@ -13,8 +14,7 @@ def check_domestic_conformance(file_path):
     log = pm4py.read_xes(file_path)
 
     print("\n--- Step 1: Re-Discover Strict Model ---")
-    filtered_log = pm4py.filter_variants_by_coverage_percentage(log, 0.25)
-    net, im, fm = pm4py.discover_petri_net_inductive(filtered_log)
+    net, im, fm = pm4py.discover_petri_net_inductive(log, noise_threshold=0.2)
 
     print("\n--- Step 2: Conformance Checking (Token Replay) ---")
     print("Evaluating the 'Happy Path' model against the entire unfiltered log...\n")
@@ -32,7 +32,8 @@ def check_domestic_conformance(file_path):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)
+    # script now lives in src/Domestic_Analysis/, so go up two levels to the project root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
     file_path = os.path.join(project_root, 'Data', 'raw', 'DomesticDeclarations.xes')
     
     check_domestic_conformance(file_path)
