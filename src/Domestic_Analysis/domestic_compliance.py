@@ -64,7 +64,8 @@ if __name__ == "__main__":
     # Dynamically locate the file to ensure compatibility across different machines in the shared GitHub repo
     # This prevents 'FileNotFound' errors when your project partner pulls the code.
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)
+    # Go up TWO levels: from Domestic_Analysis -> src -> Root
+    project_root = os.path.dirname(os.path.dirname(script_dir))
     file_path = os.path.join(project_root, 'Data', 'raw', 'DomesticDeclarations.xes')
     
     analyze_domestic_compliance(file_path)
